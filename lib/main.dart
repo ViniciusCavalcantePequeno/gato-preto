@@ -1,6 +1,6 @@
-import 'package:chat_noir/core/theme.dart';
-import 'package:chat_noir/features/game/logica/logicaJogo.dart';
-import 'package:chat_noir/features/game/%20apresentacao/telas/tela.dart';
+import 'package:chat_noir/core/tema.dart';
+import 'package:chat_noir/features/jogo/logica/logicaJogo.dart';
+import 'package:chat_noir/features/jogo/%20apresentacao/telas/tela.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
         title: 'Gato Preto',
         debugShowCheckedModeBanner: false,
         theme: appTheme, 
-        home: const GameScreen(), 
+        home: const TelaJogo(), 
       ),
     );
   }

@@ -3,19 +3,19 @@ import 'dart:collection';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:chat_noir/core/constants.dart';
-import 'package:chat_noir/features/game/data/modeloCelula.dart';
+import 'package:chat_noir/features/jogo/modelo/modeloCelula.dart';
 
 enum GameStatus { playing, playerWon, catWon }
 
 class _MinimaxResult {
-  final double score;
+  final double jogada;
   final CellModel? move;
-  _MinimaxResult(this.score, this.move);
+  _MinimaxResult(this.jogada, this.move);
 }
 
 class GameLogic extends ChangeNotifier {
-  int _playerScore = 0;
-  int _cpuScore = 0;
+  int _jogador = 0;
+  int _gatoJogada = 0;
   GameStatus _gameStatus = GameStatus.playing;
 
   late List<List<CellModel>> board;
@@ -23,8 +23,8 @@ class GameLogic extends ChangeNotifier {
 
   final Set<CellModel> _catVisited = {};
 
-  int get playerScore => _playerScore;
-  int get cpuScore => _cpuScore;
+  int get jogador => _jogador;
+  int get gatoJogada => _gatoJogada;
   GameStatus get gameStatus => _gameStatus;
 
   GameLogic() {
@@ -40,8 +40,8 @@ class GameLogic extends ChangeNotifier {
   }
 
   void resetAll() {
-    _playerScore = 0;
-    _cpuScore = 0;
+    _jogador = 0;
+    _gatoJogada = 0;
     resetGame();
   }
 
@@ -53,7 +53,7 @@ class GameLogic extends ChangeNotifier {
     board = List.generate(
       numeroLinhas,
       (row) => List.generate(
-        kNumCols,
+        numeroColunas,
         (col) => CellModel(row: row, col: col),
       ),
     );
@@ -69,7 +69,7 @@ class GameLogic extends ChangeNotifier {
 
     while (placed < fenceCount) {
       final row = random.nextInt(numeroLinhas);
-      final col = random.nextInt(kNumCols);
+      final col = random.nextInt(numeroColunas);
       final cell = board[row][col];
 
       if (cell.state == CellState.empty) {
@@ -107,11 +107,11 @@ class GameLogic extends ChangeNotifier {
 
       if (_isOnEdge(catPosition)) {
         _gameStatus = GameStatus.catWon;
-        _cpuScore++;
+        _gatoJogada++;
       }
     } else {
       _gameStatus = GameStatus.playerWon;
-      _playerScore++;
+      _jogador++;
     }
 
     notifyListeners();
@@ -131,11 +131,11 @@ class GameLogic extends ChangeNotifier {
       for (final neighbor in neighbors) {
         final eval = _minimax(neighbor, depth - 1, false, alpha, beta);
 
-        if (eval.score > maxEval) {
-          maxEval = eval.score;
+        if (eval.jogada > maxEval) {
+          maxEval = eval.jogada;
           bestMove = neighbor;
         }
-        else if (eval.score == maxEval && bestMove != null) {
+        else if (eval.jogada == maxEval && bestMove != null) {
           if (_distanceToEdge(neighbor) < _distanceToEdge(bestMove)) {
             bestMove = neighbor;
           }
@@ -151,7 +151,7 @@ class GameLogic extends ChangeNotifier {
 
       for (final neighbor in neighbors) {
         final eval = _minimax(neighbor, depth - 1, true, alpha, beta);
-        minEval = min(minEval, eval.score);
+        minEval = min(minEval, eval.jogada);
         beta = min(beta, minEval);
         if (beta <= alpha) break;
       }
@@ -191,7 +191,7 @@ class GameLogic extends ChangeNotifier {
   }
 
   bool _isOnEdge(CellModel cell) {
-    return cell.row == 0 || cell.row == numeroLinhas - 1 || cell.col == 0 || cell.col == kNumCols - 1;
+    return cell.row == 0 || cell.row == numeroLinhas - 1 || cell.col == 0 || cell.col == numeroColunas - 1;
   }
 
   bool _isSurrounded(CellModel cell) {
@@ -217,7 +217,7 @@ class GameLogic extends ChangeNotifier {
       final newRow = r + dir[0];
       final newCol = c + dir[1];
 
-      if (newRow >= 0 && newRow < numeroLinhas && newCol >= 0 && newCol < kNumCols) {
+      if (newRow >= 0 && newRow < numeroLinhas && newCol >= 0 && newCol < numeroColunas) {
         neighbors.add(board[newRow][newCol]);
       }
     }
@@ -229,7 +229,7 @@ class GameLogic extends ChangeNotifier {
     final top = cell.row;
     final bottom = numeroLinhas - 1 - cell.row;
     final left = cell.col;
-    final right = kNumCols - 1 - cell.col;
+    final right = numeroColunas - 1 - cell.col;
     return min(min(top, bottom), min(left, right));
   }
 }

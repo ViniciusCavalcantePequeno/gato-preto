@@ -1,5 +1,5 @@
-import 'package:chat_noir/features/game/logica/logicaJogo.dart';
-import 'package:chat_noir/features/game/%20apresentacao/componentes/celula.dart';
+import 'package:chat_noir/features/jogo/logica/logicaJogo.dart';
+import 'package:chat_noir/features/jogo/%20apresentacao/componentes/celula.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
