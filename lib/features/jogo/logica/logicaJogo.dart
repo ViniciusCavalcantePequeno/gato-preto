@@ -5,231 +5,217 @@ import 'package:flutter/foundation.dart';
 import 'package:chat_noir/core/constants.dart';
 import 'package:chat_noir/features/jogo/modelo/modeloCelula.dart';
 
-enum GameStatus { playing, playerWon, catWon }
+enum StatusJogo { jogando, jogadorVenceu, gatoVenceu }
 
-class _MinimaxResult {
-  final double jogada;
-  final CellModel? move;
-  _MinimaxResult(this.jogada, this.move);
+class ResultadoMinimax {
+  final double valor;
+  final CellModel? movimento;
+  ResultadoMinimax(this.valor, this.movimento);
 }
 
-class GameLogic extends ChangeNotifier {
-  int _jogador = 0;
-  int _gatoJogada = 0;
-  GameStatus _gameStatus = GameStatus.playing;
+class LogicaJogo extends ChangeNotifier {
+  int _placarJogador = 0;
+  int _placarGato = 0;
+  StatusJogo _status = StatusJogo.jogando;
 
-  late List<List<CellModel>> board;
-  late CellModel catPosition;
+  late List<List<CellModel>> tabuleiro;
+  late CellModel posicaoGato;
 
-  final Set<CellModel> _catVisited = {};
+  final Set<CellModel> _gatoVisitado = {};
+  CellModel? _ultimaPosicaoGato;
+  final Random _aleatorio = Random();
 
-  int get jogador => _jogador;
-  int get gatoJogada => _gatoJogada;
-  GameStatus get gameStatus => _gameStatus;
+  int get placarJogador => _placarJogador;
+  int get placarGato => _placarGato;
+  StatusJogo get status => _status;
 
-  GameLogic() {
-    _initializeGame();
+  LogicaJogo() {
+    reiniciarJogo();
   }
 
-  void resetGame() {
-    _gameStatus = GameStatus.playing;
-    _catVisited.clear();
-    _initializeBoard();
-    _placeInitialFences();
+  void reiniciarJogo() {
+    _status = StatusJogo.jogando;
+    _gatoVisitado.clear();
+    _ultimaPosicaoGato = null;
+    _inicializarTabuleiro();
+    _colocarObstaculosIniciais();
     notifyListeners();
   }
 
-  void resetAll() {
-    _jogador = 0;
-    _gatoJogada = 0;
-    resetGame();
+  void zerarTudo() {
+    _placarJogador = 0;
+    _placarGato = 0;
+    reiniciarJogo();
   }
 
-  void _initializeGame() {
-    resetGame();
-  }
-
-  void _initializeBoard() {
-    board = List.generate(
+  void _inicializarTabuleiro() {
+    tabuleiro = List.generate(
       numeroLinhas,
-      (row) => List.generate(
+      (linha) => List.generate(
         numeroColunas,
-        (col) => CellModel(row: row, col: col),
+        (coluna) => CellModel(row: linha, col: coluna),
       ),
     );
-
-    catPosition = board[5][5];
-    catPosition.state = CellState.cat;
+    posicaoGato = tabuleiro[5][5];
+    posicaoGato.state = CellState.cat;
   }
 
-  void _placeInitialFences() {
-    final random = Random();
-    final fenceCount = random.nextInt(7) + 12;
-    int placed = 0;
-
-    while (placed < fenceCount) {
-      final row = random.nextInt(numeroLinhas);
-      final col = random.nextInt(numeroColunas);
-      final cell = board[row][col];
-
-      if (cell.state == CellState.empty) {
-        cell.state = CellState.blocked;
-        placed++;
+  void _colocarObstaculosIniciais() {
+    final quantidade = _aleatorio.nextInt(7) + 12;
+    int colocados = 0;
+    while (colocados < quantidade) {
+      final linha = _aleatorio.nextInt(numeroLinhas);
+      final coluna = _aleatorio.nextInt(numeroColunas);
+      final celula = tabuleiro[linha][coluna];
+      if (celula.state == CellState.empty) {
+        celula.state = CellState.blocked;
+        colocados++;
       }
     }
   }
 
-  void handlePlayerClick(int row, int col) {
-    if (_gameStatus != GameStatus.playing) return;
-
-    final cell = board[row][col];
-    if (cell.state != CellState.empty) return;
-
-    cell.state = CellState.blocked;
+  void jogadorClick(int row, int col) {
+    if (_status != StatusJogo.jogando) return;
+    final celula = tabuleiro[row][col];
+    if (celula.state != CellState.empty) return;
+    celula.state = CellState.blocked;
     notifyListeners();
-
-    Future.delayed(const Duration(milliseconds: 300), _cpuMove);
+    Future.delayed(const Duration(milliseconds: 300), _movimentoGato);
   }
 
-  void _cpuMove() {
-    if (_gameStatus != GameStatus.playing) return;
+  void _movimentoGato() {
+    if (_status != StatusJogo.jogando) return;
 
-    const baseDepth = 3;
-    final depth = (_distanceToEdge(catPosition) <= 3) ? 5 : baseDepth;
+    final depth = (_distanciaParaBorda(posicaoGato) <= 3) ? 5 : 3;
+    final melhor = _minimax(posicaoGato, depth, true, -double.infinity, double.infinity);
 
-    final bestMove = _minimax(catPosition, depth, true, -double.infinity, double.infinity);
+    final vizinhosDisponiveis = _vizinhosDisponiveis(posicaoGato);
 
-    if (bestMove.move != null) {
-      _catVisited.add(catPosition); 
-      catPosition.state = CellState.empty;
-      catPosition = bestMove.move!;
-      catPosition.state = CellState.cat;
+    if (melhor.movimento != null) {
+      _ultimaPosicaoGato = posicaoGato;
+      posicaoGato.state = CellState.empty;
+      posicaoGato = melhor.movimento!;
+      posicaoGato.state = CellState.cat;
 
-      if (_isOnEdge(catPosition)) {
-        _gameStatus = GameStatus.catWon;
-        _gatoJogada++;
+      if (_estaNaBorda(posicaoGato)) {
+        _status = StatusJogo.gatoVenceu;
+        _placarGato++;
       }
-    } else {
-      _gameStatus = GameStatus.playerWon;
-      _jogador++;
+    } else if (vizinhosDisponiveis.isEmpty) {
+      // Vitória do jogador somente se o gato realmente não tiver movimentos
+      _status = StatusJogo.jogadorVenceu;
+      _placarJogador++;
     }
 
     notifyListeners();
   }
 
-  _MinimaxResult _minimax(CellModel position, int depth, bool isMaximizing, double alpha, double beta) {
-    if (depth == 0 || _isOnEdge(position) || _isSurrounded(position)) {
-      return _MinimaxResult(_evaluateBoard(position), null);
+  ResultadoMinimax _minimax(CellModel celula, int depth, bool maximizando, double alpha, double beta) {
+    if (depth == 0 || _estaNaBorda(celula) || _isSurrounded(celula)) {
+      return ResultadoMinimax(_avaliarCelula(celula), null);
     }
 
-    final neighbors = _getAvailableNeighbors(position);
+    final vizinhos = _vizinhosDisponiveis(celula);
 
-    if (isMaximizing) {
-      double maxEval = -double.infinity;
-      CellModel? bestMove;
+    if (maximizando) {
+      double maxValor = -double.infinity;
+      CellModel? melhorMove;
 
-      for (final neighbor in neighbors) {
-        final eval = _minimax(neighbor, depth - 1, false, alpha, beta);
+      for (final vizinho in vizinhos) {
+        final resultado = _minimax(vizinho, depth - 1, false, alpha, beta);
+        final heuristica = resultado.valor + (10 / (_distanciaParaBorda(vizinho) + 1));
 
-        if (eval.jogada > maxEval) {
-          maxEval = eval.jogada;
-          bestMove = neighbor;
-        }
-        else if (eval.jogada == maxEval && bestMove != null) {
-          if (_distanceToEdge(neighbor) < _distanceToEdge(bestMove)) {
-            bestMove = neighbor;
+        if (heuristica > maxValor) {
+          maxValor = heuristica;
+          melhorMove = vizinho;
+        } else if (heuristica == maxValor && melhorMove != null) {
+          if (_distanciaParaBorda(vizinho) < _distanciaParaBorda(melhorMove)) {
+            melhorMove = vizinho;
           }
         }
 
-        alpha = max(alpha, maxEval);
+        alpha = max(alpha, maxValor);
         if (beta <= alpha) break;
       }
 
-      return _MinimaxResult(maxEval, bestMove);
+      return ResultadoMinimax(maxValor, melhorMove);
     } else {
-      double minEval = double.infinity;
-
-      for (final neighbor in neighbors) {
-        final eval = _minimax(neighbor, depth - 1, true, alpha, beta);
-        minEval = min(minEval, eval.jogada);
-        beta = min(beta, minEval);
+      double minValor = double.infinity;
+      for (final vizinho in vizinhos) {
+        final resultado = _minimax(vizinho, depth - 1, true, alpha, beta);
+        minValor = min(minValor, resultado.valor);
+        beta = min(beta, minValor);
         if (beta <= alpha) break;
       }
-
-      return _MinimaxResult(minEval, null);
+      return ResultadoMinimax(minValor, null);
     }
   }
 
-  double _evaluateBoard(CellModel position) {
-    if (_isOnEdge(position)) return 100.0;
-    if (_isSurrounded(position)) return -100.0;
+  double _avaliarCelula(CellModel celula) {
+    if (_estaNaBorda(celula)) return 100.0;
+    if (_isSurrounded(celula)) return -100.0;
+    if (_gatoVisitado.contains(celula)) return -50.0;
 
-    if (_catVisited.contains(position)) {
-      return -200.0;
-    }
-
-    final queue = Queue<List<CellModel>>()..add([position]);
-    final visited = {position};
-
-    int distance = 0;
+    final queue = Queue<List<CellModel>>()..add([celula]);
+    final visitado = {celula};
+    int distancia = 0;
 
     while (queue.isNotEmpty) {
-      distance++;
-      final path = queue.removeFirst();
-      final current = path.last;
+      distancia++;
+      final caminho = queue.removeFirst();
+      final atual = caminho.last;
 
-      for (final neighbor in _getAvailableNeighbors(current)) {
-        if (!visited.contains(neighbor)) {
-          if (_isOnEdge(neighbor)) return 50.0 - distance;
-          visited.add(neighbor);
-          queue.add([...path, neighbor]);
+      for (final vizinho in _vizinhosDisponiveis(atual)) {
+        if (!visitado.contains(vizinho)) {
+          if (_estaNaBorda(vizinho)) return 50.0 - distancia.toDouble();
+          visitado.add(vizinho);
+          queue.add([...caminho, vizinho]);
         }
       }
     }
 
-    return -50.0;
+    return -10.0 * (_vizinhosDisponiveis(celula).length);
   }
 
-  bool _isOnEdge(CellModel cell) {
-    return cell.row == 0 || cell.row == numeroLinhas - 1 || cell.col == 0 || cell.col == numeroColunas - 1;
+  bool _estaNaBorda(CellModel celula) {
+    return celula.row == 0 ||
+        celula.row == numeroLinhas - 1 ||
+        celula.col == 0 ||
+        celula.col == numeroColunas - 1;
   }
 
-  bool _isSurrounded(CellModel cell) {
-    return _getAvailableNeighbors(cell).isEmpty;
-  }
+  bool _isSurrounded(CellModel celula) => _vizinhosDisponiveis(celula).isEmpty;
 
-  List<CellModel> _getAvailableNeighbors(CellModel cell) {
-    return _getNeighbors(cell).where((n) => n.state != CellState.blocked).toList();
-  }
+  List<CellModel> _vizinhosDisponiveis(CellModel celula) =>
+      _obterVizinhos(celula).where((n) => n.state == CellState.empty).toList();
 
-  List<CellModel> _getNeighbors(CellModel cell) {
-    final r = cell.row;
-    final c = cell.col;
-    final isEvenRow = r % 2 == 0;
+  List<CellModel> _obterVizinhos(CellModel celula) {
+    final r = celula.row;
+    final c = celula.col;
+    final par = r % 2 == 0;
 
-    final directions = isEvenRow
+    final direcoes = par
         ? [[-1, 0], [-1, -1], [0, -1], [0, 1], [1, 0], [1, -1]]
         : [[-1, 1], [-1, 0], [0, -1], [0, 1], [1, 1], [1, 0]];
 
-    final neighbors = <CellModel>[];
+    final vizinhos = <CellModel>[];
 
-    for (final dir in directions) {
-      final newRow = r + dir[0];
-      final newCol = c + dir[1];
-
-      if (newRow >= 0 && newRow < numeroLinhas && newCol >= 0 && newCol < numeroColunas) {
-        neighbors.add(board[newRow][newCol]);
+    for (final dir in direcoes) {
+      final nr = r + dir[0];
+      final nc = c + dir[1];
+      if (nr >= 0 && nr < numeroLinhas && nc >= 0 && nc < numeroColunas) {
+        vizinhos.add(tabuleiro[nr][nc]);
       }
     }
 
-    return neighbors;
+    return vizinhos;
   }
 
-  int _distanceToEdge(CellModel cell) {
-    final top = cell.row;
-    final bottom = numeroLinhas - 1 - cell.row;
-    final left = cell.col;
-    final right = numeroColunas - 1 - cell.col;
+  int _distanciaParaBorda(CellModel celula) {
+    final top = celula.row;
+    final bottom = numeroLinhas - 1 - celula.row;
+    final left = celula.col;
+    final right = numeroColunas - 1 - celula.col;
     return min(min(top, bottom), min(left, right));
   }
 }

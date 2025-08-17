@@ -1,6 +1,6 @@
 import 'package:chat_noir/core/styles/cor.dart';
 import 'package:chat_noir/features/jogo/modelo/modeloCelula.dart';
-import 'package:chat_noir/features/jogo/%20apresentacao/componentes/formato.dart';
+import 'package:chat_noir/features/jogo/apresentacao/componentes/formato.dart';
 import 'package:flutter/material.dart';
 
 class HexCell extends StatelessWidget {

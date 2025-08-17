@@ -1,5 +1,5 @@
 import 'package:chat_noir/features/jogo/logica/logicaJogo.dart';
-import 'package:chat_noir/features/jogo/%20apresentacao/componentes/tabuleiro.dart';
+import 'package:chat_noir/features/jogo/apresentacao/componentes/tabuleiro.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -14,25 +14,25 @@ class _TelaJogoState extends State<TelaJogo> {
   @override
   void initState() {
     super.initState();
-    context.read<GameLogic>().addListener(_verificarStatusJogo);
+    context.read<LogicaJogo>().addListener(_verificarStatusJogo);
   }
 
   @override
   void dispose() {
-    context.read<GameLogic>().removeListener(_verificarStatusJogo);
+    context.read<LogicaJogo>().removeListener(_verificarStatusJogo);
     super.dispose();
   }
 
   void _verificarStatusJogo() {
-    final jogo = context.read<GameLogic>();
-    if (jogo.gameStatus != GameStatus.playing) {
+    final jogo = context.read<LogicaJogo>();
+    if (jogo.status != StatusJogo.jogando) {
       Future.delayed(const Duration(milliseconds: 100), () {
-        _exibirDialogoFim(jogo.gameStatus);
+        _exibirDialogoFim(jogo.status);
       });
     }
   }
 
-  void _exibirDialogoFim(GameStatus status) {
+  void _exibirDialogoFim(StatusJogo status) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -46,13 +46,13 @@ class _TelaJogoState extends State<TelaJogo> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
-                  status == GameStatus.playerWon ? 'Você Venceu!' : 'Você Perdeu!',
+                  status == StatusJogo.jogadorVenceu ? 'Você Venceu!' : 'Você Perdeu!',
                   style: const TextStyle(fontFamily: 'Pacifico', fontSize: 24),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 15),
                 Text(
-                  status == GameStatus.playerWon
+                  status == StatusJogo.jogadorVenceu
                       ? 'Você capturou o gato'
                       : 'O gato escapou',
                   style: const TextStyle(fontFamily: 'Pacifico'),
@@ -62,7 +62,7 @@ class _TelaJogoState extends State<TelaJogo> {
                 TextButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    context.read<GameLogic>().resetGame();
+                    context.read<LogicaJogo>().reiniciarJogo();
                   },
                   child: const Text(
                     'Reiniciar',
@@ -77,20 +77,20 @@ class _TelaJogoState extends State<TelaJogo> {
     );
   }
 
-  Widget _barraStatus(GameLogic jogo) {
+  Widget _barraStatus(LogicaJogo jogo) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        Text('Jogador: ${jogo.jogador}', style: const TextStyle(fontFamily: 'Pacifico')),
+        Text('Jogador: ${jogo.placarJogador}', style: const TextStyle(fontFamily: 'Pacifico')),
         ElevatedButton(
-          onPressed: () => context.read<GameLogic>().resetAll(),
+          onPressed: () => context.read<LogicaJogo>().zerarTudo(),
           style: ElevatedButton.styleFrom(
             minimumSize: const Size(100, 40),
             padding: const EdgeInsets.symmetric(horizontal: 10),
           ),
           child: const Text('Zerar Placar', style: TextStyle(fontFamily: 'Pacifico')),
         ),
-        Text('Gato: ${jogo.gatoJogada}', style: const TextStyle(fontFamily: 'Pacifico')),
+        Text('Gato: ${jogo.placarGato}', style: const TextStyle(fontFamily: 'Pacifico')),
       ],
     );
   }
@@ -110,7 +110,7 @@ class _TelaJogoState extends State<TelaJogo> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Consumer<GameLogic>(builder: (_, jogo, __) => _barraStatus(jogo)),
+              Consumer<LogicaJogo>(builder: (_, jogo, __) => _barraStatus(jogo)),
               const SizedBox(height: 20),
               const Expanded(
                 child: Center(
