@@ -51,7 +51,7 @@ class GameLogic extends ChangeNotifier {
 
   void _initializeBoard() {
     board = List.generate(
-      kNumRows,
+      numeroLinhas,
       (row) => List.generate(
         kNumCols,
         (col) => CellModel(row: row, col: col),
@@ -68,7 +68,7 @@ class GameLogic extends ChangeNotifier {
     int placed = 0;
 
     while (placed < fenceCount) {
-      final row = random.nextInt(kNumRows);
+      final row = random.nextInt(numeroLinhas);
       final col = random.nextInt(kNumCols);
       final cell = board[row][col];
 
@@ -191,7 +191,7 @@ class GameLogic extends ChangeNotifier {
   }
 
   bool _isOnEdge(CellModel cell) {
-    return cell.row == 0 || cell.row == kNumRows - 1 || cell.col == 0 || cell.col == kNumCols - 1;
+    return cell.row == 0 || cell.row == numeroLinhas - 1 || cell.col == 0 || cell.col == kNumCols - 1;
   }
 
   bool _isSurrounded(CellModel cell) {
@@ -217,7 +217,7 @@ class GameLogic extends ChangeNotifier {
       final newRow = r + dir[0];
       final newCol = c + dir[1];
 
-      if (newRow >= 0 && newRow < kNumRows && newCol >= 0 && newCol < kNumCols) {
+      if (newRow >= 0 && newRow < numeroLinhas && newCol >= 0 && newCol < kNumCols) {
         neighbors.add(board[newRow][newCol]);
       }
     }
@@ -227,7 +227,7 @@ class GameLogic extends ChangeNotifier {
 
   int _distanceToEdge(CellModel cell) {
     final top = cell.row;
-    final bottom = kNumRows - 1 - cell.row;
+    final bottom = numeroLinhas - 1 - cell.row;
     final left = cell.col;
     final right = kNumCols - 1 - cell.col;
     return min(min(top, bottom), min(left, right));
